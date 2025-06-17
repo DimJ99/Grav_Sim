@@ -44,8 +44,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 glm::vec3 sphericalToCartesian(float r, float theta, float phi);
-void DrawGrid(GLuint shaderProgram, GLuint gridVAO, size_t vertexCount);
-
 
 class Object {
     public:
@@ -146,11 +144,6 @@ class Object {
 };
 std::vector<Object> objs = {};
 
-std::vector<float> CreateGridVertices(float size, int divisions, const std::vector<Object>& objs);
-
-GLuint gridVAO, gridVBO; // 100x100 grid with 10 divisions
-
-
 int main() {
     GLFWwindow* window = StartGLU();
     GLuint shaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
@@ -172,14 +165,9 @@ int main() {
     
     objs = {
         Object(glm::vec3(3844, 0, 0), glm::vec3(0, 0, 228), 7.34767309*pow(10, 22), 3344),
-        // Object(glm::vec3(-250, 0, 0), glm::vec3(0, -50, 0), 7.34767309*pow(10, 22), 3344),
         Object(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 5.97219*pow(10, 24), 5515),
 
     };
-    std::vector<float> gridVertices = CreateGridVertices(100000.0f, 50, objs);
-    CreateVBOVAO(gridVAO, gridVBO, gridVertices.data(), gridVertices.size());
-    std::cout<<"Earth radius: "<<objs[1].radius<<std::endl;
-    std::cout<<"Moon radius: "<<objs[0].radius<<std::endl;
 
     while (!glfwWindowShouldClose(window) && running == true) {
         float currentFrame = glfwGetTime();
@@ -208,13 +196,6 @@ int main() {
             }
         }
 
-        // Draw the grid
-        glUseProgram(shaderProgram);
-        glUniform4f(objectColorLoc, 1.0f, 1.0f, 1.0f, 0.25f); // White color with 50% transparency for the grid
-        gridVertices = CreateGridVertices(10000.0f, 50, objs);
-        glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
-        glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(float), gridVertices.data(), GL_DYNAMIC_DRAW);
-        DrawGrid(shaderProgram, gridVAO, gridVertices.size());
 
         // Draw the triangle
         for(auto& obj : objs) {
@@ -269,9 +250,6 @@ int main() {
         glDeleteVertexArrays(1, &obj.VAO);
         glDeleteBuffers(1, &obj.VBO);
     }
-
-    glDeleteVertexArrays(1, &gridVAO);
-    glDeleteBuffers(1, &gridVBO);
 
     glDeleteProgram(shaderProgram);
     glfwTerminate();
@@ -474,11 +452,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods){
             objs[objs.size()-1].Launched = true;
         };
     };
-    // if (!objs.empty() && button == GLFW_MOUSE_BUTTON_RIGHT && objs[objs.size()-1].Initalizing) {
-    //     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-    //         objs[objs.size()-1].mass *= 1.2;}
-    //         std::cout<<"MASS: "<<objs[objs.size()-1].mass<<std::endl;
-    // }
+
 };
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
     float cameraSpeed = 50000.0f * deltaTime;
@@ -495,122 +469,6 @@ glm::vec3 sphericalToCartesian(float r, float theta, float phi){
     float z = r * sin(theta) * sin(phi);
     return glm::vec3(x, y, z);
 };
-void DrawGrid(GLuint shaderProgram, GLuint gridVAO, size_t vertexCount) {
-    glUseProgram(shaderProgram);
-    glm::mat4 model = glm::mat4(1.0f); // Identity matrix for the grid
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-    glBindVertexArray(gridVAO);
-    glPointSize(5.0f);
-    glDrawArrays(GL_LINES, 0, vertexCount / 3);
-    glBindVertexArray(0);
-}
-std::vector<float> CreateGridVertices(float size, int divisions, const std::vector<Object>& objs) {
-    std::vector<float> vertices;
-    float step = size / divisions;
-    float halfSize = size / 2.0f;
-
-    // x axis
-    for (int yStep = 3; yStep <= 3; ++yStep) {
-        float y = -halfSize*0.3f + yStep * step;
-        for (int zStep = 0; zStep <= divisions; ++zStep) {
-            float z = -halfSize + zStep * step;
-            for (int xStep = 0; xStep < divisions; ++xStep) {
-                float xStart = -halfSize + xStep * step;
-                float xEnd = xStart + step;
-                vertices.push_back(xStart); vertices.push_back(y); vertices.push_back(z);
-                vertices.push_back(xEnd);   vertices.push_back(y); vertices.push_back(z);
-            }
-        }
-    }
-
-    // // yzxis
-    // for (int xStep = 0; xStep <= divisions; ++xStep) {
-    //     float x = -halfSize + xStep * step;
-    //     for (int zStep = 0; zStep <= divisions; ++zStep) {
-    //         float z = -halfSize + zStep * step;s
-    //         for (int yStep = 0; yStep < divisions; ++yStep) {
-    //             float yStart = -halfSize + yStep * step;
-    //             float yEnd = yStart + step;
-    //             vertices.push_back(x); vertices.push_back(yStart); vertices.push_back(z);
-    //             vertices.push_back(x); vertices.push_back(yEnd);   vertices.push_back(z);
-    //         }
-    //     }
-    // }
-
-    // zaxis
-    for (int xStep = 0; xStep <= divisions; ++xStep) {
-        float x = -halfSize + xStep * step;
-        for (int yStep = 3; yStep <= 3; ++yStep) {
-            float y = -halfSize*0.3f + yStep * step;
-            for (int zStep = 0; zStep < divisions; ++zStep) {
-                float zStart = -halfSize + zStep * step;
-                float zEnd = zStart + step;
-                vertices.push_back(x); vertices.push_back(y); vertices.push_back(zStart);
-                vertices.push_back(x); vertices.push_back(y); vertices.push_back(zEnd);
-            }
-        }
-    }
-    
-
-    // displacement
-    // for (int i = 0; i < vertices.size(); i += 3) {
-    //     glm::vec3 vertexPos(vertices[i], vertices[i+1], vertices[i+2]);
-    //     glm::vec3 totalDisplacement(0.0f);
-
-    //     for (const auto& obj : objs) {
-    //         glm::vec3 toObject = obj.GetPos() - vertexPos;
-    //         float distance = glm::length(toObject);
-
-    //         float distance_m = distance * 1000.0f;
-            
-    //         float strength = (G * obj.mass) / (distance_m * distance_m);
-    //         glm::vec3 displacement = glm::normalize(toObject) * strength;
-
-    //         totalDisplacement += -displacement * (2/distance);
-    //     }
-
-    //     vertexPos += totalDisplacement; 
-
-    //     // Update vertex data
-    //     vertices[i]   = vertexPos[0];
-    //     vertices[i+1] = vertexPos[1];
-    //     vertices[i+2] = vertexPos[2];
-    // }
-    float minz = 0.0f;
-    for (int i = 0; i < vertices.size(); i += 3) {
-        glm::vec3 vertexPos(vertices[i], vertices[i+1], vertices[i+2]);
-        glm::vec3 totalDisplacement(0.0f);
-        
-
-        for (const auto& obj : objs) {
-            glm::vec3 toObject = obj.GetPos() - vertexPos;
-            float distance = glm::length(toObject);
-
-            float distance_m = distance * 1000.0f;
-            float rs = (2*G*obj.mass)/(c*c);
-
-            float z = 2 * sqrt(rs*(distance_m - rs)) * 100.0f;
-            totalDisplacement += z;
-            
-
-        }
-        
-        vertexPos += totalDisplacement; 
-
-         vertices[i+1] = vertexPos[1] / 15.0f - 3000.0f;
-    }
-    
-
-    return vertices;
-}
-
-
-
-
-
-
 
 
 

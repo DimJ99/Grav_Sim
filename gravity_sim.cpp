@@ -63,7 +63,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 glm::vec3 sphericalToCartesian(float r, float theta, float phi);
-void DrawGrid(GLuint shaderProgram, GLuint gridVAO, size_t vertexCount);
 
 class Object {
     public:
@@ -185,7 +184,7 @@ Object(glm::vec3(-1000, 1000, 0), glm::vec3(-1000, 0, 500), 4.8675e21, 5243, glm
 
 Object(glm::vec3(-1500, -1500, 0), glm::vec3(0, 0, -1000), 5.9724e21, 5515, glm::vec4(0.2f, 0.5f, 1.0f, 1.0f)),
 
-Object(glm::vec3(-2000, 1000, 1000), glm::vec3(-300, -400, -100), 6.417e21, 3933, glm::vec4(1.0f, 0.3f, 0.3f, 1.0f)),
+Object(glm::vec3(-2000, 1000, 1000), glm::vec3(-300, -400, 0), 6.417e21, 3933, glm::vec4(1.0f, 0.3f, 0.3f, 1.0f)),
 
 Object(glm::vec3(-3000, -3000, 0), glm::vec3(0, 0, 500), 1.898e23, 1326, glm::vec4(1.0f, 0.85f, 0.6f, 1.0f)),
 
@@ -230,7 +229,6 @@ Object(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 1.989e25, 1408, glm::vec4(1.0f, 0
         gridVertices = UpdateGridVertices(gridVertices, objs);
         glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
         glBufferData(GL_ARRAY_BUFFER, gridVertices.size() * sizeof(float), gridVertices.data(), GL_DYNAMIC_DRAW);
-        DrawGrid(shaderProgram, gridVAO, gridVertices.size());
 
         for(auto& obj : objs) {
             glUniform4f(objectColorLoc, obj.color.r, obj.color.g, obj.color.b, obj.color.a);
@@ -492,16 +490,6 @@ glm::vec3 sphericalToCartesian(float r, float theta, float phi){
     float z = r * sin(theta) * sin(phi);
     return glm::vec3(x, y, z);
 };
-void DrawGrid(GLuint shaderProgram, GLuint gridVAO, size_t vertexCount) {
-    glUseProgram(shaderProgram);
-    glm::mat4 model = glm::mat4(1.0f);
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(gridVAO);
-    glPointSize(5.0f);
-    glDrawArrays(GL_LINES, 0, vertexCount / 3);
-    glBindVertexArray(0);
-}
 std::vector<float> CreateGridVertices(float size, int divisions, const std::vector<Object>& objs) {
     std::vector<float> vertices;
     float step = size / divisions;
